@@ -4,6 +4,8 @@
 ![release](https://img.shields.io/github/release/thecoder75/liveme-api.svg?style=flat-square)
 ![node-version](https://img.shields.io/node/v/liveme-api.svg?style=flat-square)
 
+## *This module is now being maintained and developed by [Lewdninja](https://github.com/Lewdninja/).  You can find the updated version there.  I am keeping this here for historical/reference purposes only!*
+
 ## Installation
 ![total-downloads](https://img.shields.io/npm/dt/liveme-api.svg?style=flat-square)
 ![yearly-downloads](https://img.shields.io/npm/dy/liveme-api.svg?style=flat-square)
