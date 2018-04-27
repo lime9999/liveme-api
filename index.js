@@ -1,440 +1,266 @@
-'use strict';
-/*
-	  _     _           __  __           _    ____ ___
-	 | |   (_)_   _____|  \/  | ___     / \  |  _ \_ _|
-	 | |   | \ \ / / _ \ |\/| |/ _ \   / _ \ | |_) | |
-	 | |___| |\ V /  __/ |  | |  __/  / ___ \|  __/| |
-	 |_____|_| \_/ \___|_|  |_|\___| /_/   \_\_|  |___|
-	                                            v2.0.0     	
-*/
 
-const   axios = require('axios'), crypto = require('crypto');
+const request = require('request-promise-native');
 
-/*
-	Constants
-*/
-const   LM_GETACCESSTOKEN = 'https://live.ksmobile.net/channel/signin',
-        LM_GETCHANNELLOGIN = 'https://live.ksmobile.net/channel/login',
-        LM_GETUSERINFO = 'https://live.ksmobile.net/user/getinfo',
-        LM_GETVIDEOINFO = 'https://live.ksmobile.net/live/queryinfo',
-        LM_GETREPLAYVIDEOS = 'https://live.ksmobile.net/live/getreplayvideos',
-        LM_KEYWORDSEARCH = 'https://live.ksmobile.net/search/searchkeyword',
-        LM_GETLIVEUSERS = 'https://live.ksmobile.net/live/newmaininfo',
-        LM_GETFANS = 'https://live.ksmobile.net/follow/getfollowerlistship',
-        LM_GETFOLLOWING = 'https://live.ksmobile.net/follow/getfollowinglistship',
-        LM_GETTRENDINGHASHTAGS = 'https://live.ksmobile.net/search/getTags',
-        LM_GETLIVEGIRLS = 'https://live.ksmobile.net/live/girls',
-        LM_GETLIVEBOYS = 'https://live.ksmobile.net/live/boys';
-
-/*
-	Local Functions
-*/
-
-function httpGet(url, params = {}) {
-    var dt = new Date();
-    axios.defaults.headers.common['d'] = Math.round(dt.getTime() / 1000);
-    return axios.post(url, params)
-        .then(response => {
-            if (response.status == 200) {
-                return response.data;
-            } else {
-                return reject(`HTTP Error: ${response.status}`);
-            }
-        });
+const API = 'https://live.ksmobile.net'
+const URL = {
+    accessToken: `${API}/channel/signin`,
+    channelLogin: `${API}/channel/login`,
+    userInfo: `${API}/user/getinfo`,
+    videoInfo: `${API}/live/queryinfo`,
+    replayVideos: `${API}/live/getreplayvideos`,
+    keywordSearch: `${API}/search/searchkeyword`,
+    liveUsers: `${API}/live/newmaininfo`,
+    fans: `${API}/follow/getfollowerlistship`,
+    following: `${API}/follow/getfollowinglistship`,
+    trendingHashtags: `${API}/search/getTags`,
+    liveBoys: `${API}/live/boys`,
+    liveGirls: `${API}/live/girls`,
 }
 
-/*
-	Exported Functions
-*/
-module.exports = {
+class LiveMe {
 
-    /*
-        email: string
-        password: string
+    constructor(params = {}) {
 
-        Returns: access token
-    */
-    getAccessToken: function(email, password) {
-        return new Promise((resolve, reject) => {
-            if (typeof email == 'undefined' || email == null) {
-                return reject('Must pass an email address to getAccessToken(email, password)');
-            }
-            if (typeof password == 'undefined' || password == null) {
-                return reject('Must pass a password to getAccessToken(email, password)');
-            }
+        // Login details
+        this.email = params.email || null
+        this.password = params.password ? Buffer.from(params.password).toString('base64') : null
+        // Userdata
+        this.user = null
+        // Tokens
+        this.tuid = null
+        this.token = null
+        this.accessToken = null
+        this.androidid = createUUID()
+        this.thirdchannel = 6
 
-            return resolve();
-        }).then(()=>{
-            var passmd5 = crypto.createHash('md5').update(password).digest("hex");
-            return httpGet(`${LM_GETACCESSTOKEN}?email=${email}&password=${passmd5}`);
-        }).then(data => {
-            if (data.status == '200') {
-                return data.data.access_token;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-            
-        });
-    },
+        if (this.email && this.password) {
+            this.getAccessTokens()
+                .then(() => {
+                    console.log('Authenticated with Live.me servers.')
+                })
+                .catch(() => {
+                    console.log('Authentication failed.')
+                })
+        }
 
-
-
-    /*
-        access_token: string
-
-        Returns: Promise of a User object
-    */
-    getChannelLogin: function(access_token) {
-        return new Promise((resolve, reject) => {
-            if (typeof access_token == 'undefined' || access_token == null) {
-                return reject('Must pass an access token to getChannelLogin(access_token)');
-            }
-            return resolve();
-        }).then(()=>{
-            var uuid = createUUID();
-            return httpGet(`${LM_GETCHANNELLOGIN}?access_token=${access_token}&thirdchannel=6&reg_type=108&androidid=~{uuid}&countrycode=`);
-        }).then(data => {
-            if (data.status == '200') {
-                return data.data.user;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-            
-        });
-    },
-
-
-
-	/*
-		uid: string
-		Returns: Promise of a User object
-	*/
-    getUserInfo: function (uid) {
-        return new Promise((resolve, reject) => {
-            if (typeof uid == 'undefined' || uid == null) {
-                return reject('Must pass a valid UID parameter to getUserInfo(uid)');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETUSERINFO}?userid=${uid}`);
-        }).then(data => {
-            if (data.status == '200') {
-                return data.data.user;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-	/*
-		vid: string
-		Returns: Promise of a Video object
-	*/
-    getVideoInfo: function (vid) {
-        return new Promise((resolve, reject) => {
-            if (typeof vid == 'undefined' || vid == null) {
-                return reject('Must pass a valid VID parameter to getVideoInfo(vid)');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETVIDEOINFO}?userid=0&videoid=${vid}`);
-        }).then(data => {
-            if (data.status == '200') {
-                if (data.data.video_info.vid == null) {
-                    return Promise.reject('Error: 500 Message: Video does not exist'); // For some reason they send back empty data instead of saying it doesn't exist.
-                }
-
-                return data.data.video_info;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-	/*
-        token: string (use getAccessToken to obtain)
-        tuid: string (use getChannelLogin to obtain)
-		uid: string
-		page: number (default 1)
-		count: number (default 10)
-		Returns: Promise of an array of Video objects
-	*/
-    getUserReplays: function (token, tuid, uid, page, count) {
-        return new Promise((resolve, reject) => {
-            if (typeof token == 'undefined' || token == null) {
-                return reject('Must pass a valid token parameter to getUserReplays(token, tuid, uid, page, count).');
-            }
-            if (typeof tuid == 'undefined' || tuid == null) {
-                return reject('Must pass a valid tuid parameter to getUserReplays(token, tuid, uid, page, count).');
-            }
-
-            if (typeof uid == 'undefined' || uid == null) {
-                return reject('Must pass a valid UID parameter to getUserReplays(token, tuid, uid, page, count).');
-            }
-
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof count == 'undefined' || count == null) {
-                count = 10;
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETREPLAYVIDEOS}?userid=${uid}&toekn=${token}&tuid=${tuid}&page_size=${count}&page_index=${page}`);
-        }).then(data => {
-            if (data.status == 200) {
-                return data.data.video_info;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-	/*
-		url: url for the chat json file
-
-		Returns: An array of message entries
-	*/
-    getChatHistoryForVideo(url) {
-        return axios.get(url)
-            .then(response => {
-                return response;
-            });
-    },
-
-    /*
-        same as above, just worded more correctly
-    */
-    getCommentHistoryForReplay(url) {
-        return axios.get(url)
-            .then(response => {
-                return response;
-            });
-    },
-
-	/*
-		query: string
-		page: number (default 1)
-		count: number (default 10)
-		type: number [1|2] (default 1)
-		country: string [2 letter country code] (default US)
-		Returns: Promise of an array of Video objects
-	*/
-    performSearch: function (query, page, count, type, country) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof count == 'undefined' || count == null) {
-                count = 10;
-            }
-
-            if (typeof type == 'undefined' || type == null) {
-                type = 0;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1.');
-            }
-
-            if (count <= 0) {
-                return reject('Count must be equal or greater than 1.');
-            }
-
-            if (type < 1 || type > 2) {
-                return reject('Type must be 1 or 2');
-            }
-
-            return resolve();
-        }).then(() => {
-            const encodedQuery = encodeURIComponent(query);
-            return httpGet(`${LM_KEYWORDSEARCH}?keyword=${encodedQuery}&type=${type}&pagesize=${count}&page=${page}&countryCode=${country}`);
-        }).then(data => {
-            if (data.status == 200) {
-                return data.data.data_info;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-    getLive: function (page, count, country) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof count == 'undefined' || count == null) {
-                count = 10;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1');
-            }
-
-            if (count <= 0) {
-                return reject('Count must be equal or greater than 1');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETLIVEUSERS}?page_size=${count}&page_index=${page}&countryCode=${country}`);
-        }).then(data => {
-            if (data.status == 200) {
-                return data.data.video_info;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-    getFans: function (uid, page, size) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof size == 'undefined' || size == null) {
-                size = 10;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1');
-            }
-
-            if (size <= 0) {
-                return reject('Count must be equal or greater than 1');
-            }
-
-            if (typeof uid == 'undefined' || uid == null) {
-                return reject('Must pass a valid UID parameter to getFans(uid)');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETFANS}?access_token=${uid}&page_size=${size}&page_index=${page}`);
-        }).then(data => {
-            if (data.status == '200') {
-                return data.data;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-    getFollowing: function (uid, page, size) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof size == 'undefined' || size == null) {
-                size = 10;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1');
-            }
-
-            if (size <= 0) {
-                return reject('Count must be equal or greater than 1');
-            }
-
-            if (typeof uid == 'undefined' || uid == null) {
-                return reject('Must pass a valid UID parameter to getFollowing(uid)');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETFOLLOWING}?access_token=${uid}&page_size=${size}&page_index=${page}`);
-        }).then(data => {
-            if (data.status == '200') {
-                return data.data;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-    getTrendingHashtags: function () {
-        return httpGet(LM_GETTRENDINGHASHTAGS)
-            .then(data => {
-                if (data.status == 200) {
-                    return data.data;
-                } else {
-                    return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-                }
-            });
-    },
-
-    getLiveGirls: function(page, size, country) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof size == 'undefined' || size == null) {
-                size = 10;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1');
-            }
-
-            if (size <= 0) {
-                return reject('Size must be equal or greater than 1');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETLIVEGIRLS}?page_size=${size}&page=${page}&countryCode=${country}`);
-        }).then(data => {
-            if (data.status == 200) {
-                return data.data;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}`);
-            }
-        });
-    },
-
-    getLiveBoys: function(page, size, country) {
-        return new Promise((resolve, reject) => {
-            if (typeof page == 'undefined' || page == null) {
-                page = 1;
-            }
-
-            if (typeof size == 'undefined' || size == null) {
-                size = 10;
-            }
-
-            if (page <= 0) {
-                return reject('Page must be equal or greater than 1');
-            }
-
-            if (size <= 0) {
-                return reject('Size must be equal or greater than 1');
-            }
-
-            return resolve();
-        }).then(() => {
-            return httpGet(`${LM_GETLIVEBOYS}?page_size=${size}&page=${page}`);
-        }).then(data => {
-            if (data.status == 200) {
-                return data.data;
-            } else {
-                return Promise.reject(`Error: ${data.status} Message: ${data.msg}&countryCode=${country}`);
-            }
-        });
     }
-};
 
+    setAuthDetails(email, password) {
+        if ( ! email || ! password) {
+            return Promise.reject('You need to provide your Live.me email and password.')
+        }
+        this.email = email
+        this.password = Buffer.from(password).toString('base64')
 
+        return this.getAccessTokens()
+    }
 
+    fetch(method, params = {}) {
+        return request(Object.assign({
+            method: 'POST',
+            url: URL[method] || method,
+            headers: {
+                d: Math.round(new Date().getTime() / 1000)
+            },
+            json: true,
+            transform: function (body) {
+                if (body.status != 200) {
+                    throw new Error('Request failed.')
+                }
+                return body.data
+            }
+        }, params))
+    }
+
+    getAccessTokens() {
+        if ( ! this.email || ! this.password) {
+            return Promise.reject('You need to provide your Live.me email and password.')
+        }
+
+        return this.fetch('accessToken', {
+            formData: {
+                name: this.email,
+                password: this.password,
+                sr: 1
+            }
+        })
+        .then(json => {
+            // Set access token
+            this.accessToken = json.access_token
+            // Pass token to login
+            return json.access_token
+        })
+        .then(accessToken => {
+            // Login
+            return this.fetch('channelLogin', {
+                formData: {
+                    access_token: accessToken,
+                    thirdchannel: this.thirdchannel,
+                    reg_type: 108,
+                    androidid: this.androidid,
+                    countrycode: ''
+                }
+            })
+        })
+        .then(json => {
+            this.user = json.user
+            this.tuid = json.user.uid
+            this.token = json.token
+            return json
+        })
+    }
+
+    getUserInfo(userid) {
+        if ( ! userid) {
+            return Promise.reject('Invalid userid.')
+        }
+
+        return this.fetch('userInfo', {
+            formData: {
+                userid
+            }
+        })
+        .then(json => {
+            return json.user
+        })
+    }
+
+    getVideoInfo(videoid) {
+        if ( ! videoid) {
+            return Promise.reject('Invalid videoid.')
+        }
+
+        return this.fetch('videoInfo', {
+            formData: {
+                userid: 0,
+                videoid
+            }
+        })
+        .then(json => {
+            return json.video_info
+        })
+    }
+
+    getUserReplays(userid, page_index = 1, page_size = 10) {
+        if ( ! userid) {
+            return Promise.reject('Invalid userid.')
+        }
+
+        if ( ! this.user) {
+            return Promise.reject('Not authenticated with Live.me!')
+        }
+
+        return this.fetch('replayVideos', {
+            formData: {
+                userid,
+                page_index,
+                page_size,
+                tuid: this.tuid,
+                token: this.token,
+                androidid: this.androidid,
+                thirdchannel: this.thirdchannel
+            }
+        })
+        .then(json => {
+            return json.video_info
+        })
+    }
+
+    getChatHistoryForVideo(url) {
+        return request(url)
+    }
+
+    getCommentHistoryForReplay(url) {
+        return request(url)
+    }
+
+    performSearch(query = '', page = 1, pagesize = 10, type, countryCode = '') {
+        if ([1, 2].indexOf(type) === -1) {
+            return Promise.reject('Type must be 1 or 2.')
+        }
+        return this.fetch('keywordSearch', {
+            formData: {
+               keyword: encodeURIComponent(query),
+               type,
+               pagesize,
+               page,
+               countryCode
+            }
+        })
+        .then(json => {
+            return json.data_info
+        })
+    }
+
+    getLive(page_index = 1, page_size = 10, countryCode = '') {
+        return this.fetch('liveUsers', {
+            formData: {
+                page_index,
+                page_size,
+                countryCode
+            }
+        })
+            .then(json => {
+                return json.video_info
+            })
+    }
+
+    getFans(access_token, page_index = 1, page_size = 10) {
+        if ( ! access_token) {
+            return Promise.reject('Invalid access_token (userid).')
+        }
+
+        return this.fetch('fans', {
+            formData: {
+                access_token,
+                page_index,
+                page_size
+            }
+        })
+    }
+
+    getFollowing(access_token, page_index = 1, page_size = 10) {
+        if ( ! access_token) {
+            return Promise.reject('Invalid access_token (userid).')
+        }
+
+        return this.fetch('following', {
+            formData: {
+                access_token,
+                page_index,
+                page_size
+            }
+        })
+    }
+
+    getTrendingHashtags() {
+        return this.fetch('trendingHashtags')
+    }
+
+    getLiveGirls(page_size = 10, page = 1, countryCode = '') {
+        return this.fetch('liveGirls', {
+            formData: {
+                page,
+                page_size,
+                countryCode
+            }
+        })
+    }
+
+    getLiveBoys(page_size = 10, page = 1, countryCode = '') {
+        return this.fetch('liveBoys', {
+            formData: {
+                page,
+                page_size,
+                countryCode
+            }
+        })
+    }
+}
+
+module.exports = LiveMe
+
+// Jibberish.
 function createUUID(t) {
     var e, n, o = [], a = "0123456789abcdef";
     for (e = 0; e < 36; e++)
