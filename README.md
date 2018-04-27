@@ -4,7 +4,7 @@
 ![release](https://img.shields.io/github/release/thecoder75/liveme-api.svg?style=flat-square)
 ![node-version](https://img.shields.io/node/v/liveme-api.svg?style=flat-square)
 
-## *This module is now being maintained and developed by [Lewdninja](https://github.com/Lewdninja/).  You can find the updated version [here](https://github.com/Lewdninja/liveme-api).  I am keeping this here for historical/reference purposes only!*
+## *This module is now being actively maintained and improved by [Lewdninja](https://github.com/Lewdninja/).  I only now mirror his improvements to the original repo for easier npm publishing only.*
 
 ## Installation
 ![total-downloads](https://img.shields.io/npm/dt/liveme-api.svg?style=flat-square)
@@ -20,11 +20,25 @@ or
 ```
 yarn add liveme-api
 ```
+### Usage Example
+```javascript
+const LivemeAPI = require('liveme-api')
+const Liveme = new LivemeAPI({
+    email: 'user@example.com',
+    password: 'password'
+})
 
-## More Info
-For details on this project, please visit the project's home site at https://thecoder75.github.io/liveme-api
+Liveme.getUserInfo('123456790123456')
+    .then(user => {
+        // user.user_info contains details on the user queried
+    })
+    .catch(err => {
+        // Unable to locate user account
+    });
+```
 
 ### Maintainers
+* [lewdninja](https://github.com/lewdninja)
 * [thecoder75](https://github.com/thecoder75)
 * [polydragon](https://github.com/polydragon)
 
