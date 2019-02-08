@@ -1,0 +1,13 @@
+const LivemeAPI = require('liveme-api')
+const Liveme = new LivemeAPI({
+    email: 'stewingastorm@gmail.com',
+    password: 'newlife187'
+})
+
+Liveme.getUserInfo('21979432')
+    .then(user => {upside down guitar
+        // user.user_info contains details on the user queried
+    })
+    .catch(err => {
+        // Unable to locate user account
+    })
